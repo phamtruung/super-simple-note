@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Note</title>
+    <style>
+        :root {
+            /* Colors */
+            --color__background-primary: rgb(233, 233, 233);
+            --color__background-second: rgb(255, 255, 255);
+            --color__foreground-primary: rgb(37, 37, 37);
+            --color__foreground-second: rgb(175, 175, 175);
+
+            /* Font */
+            --font__family: 'Courier New';
+            --font__height-large: 1.1rem;
+            --font__height-small: 1rem;
+
+            /* Size */
+            --size__width-min: 300px;
+            --size__width-max: 1000px;
+            --size__distance-level: 24px;
+            --size__distance-small: 6px;
+            --size__border-radius: 10px;
+            --size__button: 18px;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            gap: 0;
+        }
+        html, body {
+            font-family: var(--font__family);
+            background-color: var(--color__background-primary);
+            color: var(--color__foreground-primary);
+            min-width: var(--size__width-min);
+            max-width: var(--size__width-max);
+            width: 100%;
+            margin: auto;
+            overflow-x: hidden;
+        }
+
+        header {
+            font-size: var(--font__height-large);
+            font-weight: bold;
+            color: var(--color__foreground-primary);
+        }
+
+        main {
+            align-items: center;
+            margin: var(--size__distance-small);
+            overflow-y: auto;
+            padding:  calc(var(--size__distance-small) * 2);
+            margin-right: var(--size__distance-small);
+            border-radius: var(--size__border-radius);
+            min-width: var(--size__width-min);
+            max-width: var(--size__width-max);
+        }
+
+        footer {
+            min-height: calc(var(--size__distance-small) * 2);
+        }
+        .entry {
+            display: flex;
+            align-items: center;
+            gap: var(--size__distance-small);
+            padding: calc(var(--size__distance-small) * 2);
+            margin-bottom: var(--size__distance-small);
+            max-width: var(--size__width-min);
+        }
+        h1 {
+            text-align: center;
+            width: 100%;
+        }
+
+        /* ----------------------------------------------------- List */
+        ul {
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            flex: 1;
+            width: 100%;
+        }
+        li {
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            font-family: var(--font__family);
+            font-size: var(--font__height-small);
+            align-items: center;
+            gap: var(--size__distance-small);
+        }
+        li li {
+            margin-left: var(--size__distance-level);
+        }
+        /* Chỉ áp dụng border cho item-row của level 0 */
+        .with-lines > li > .item-row {
+        border-top: 1px dashed var(--color__foreground-primary);
+        padding-top: 6px; /* tuỳ chỉnh khoảng cách */
+        }
+
+        /* ----------------------------------------------------- Input Text */
+        input[type="text"] {
+            padding-left: var(--size__distance-small);
+            border: none;
+            border-radius: var(--size__border-radius);
+            font-family: var(--font__family);
+            font-size: var(--font__height-small);
+            box-sizing: border-box;
+            color: var(--color__foreground-primary);
+            flex: 1;
+        }
+        /* ----------------------------------------------------- Input Text */
+        input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            min-width: var(--size__button);
+            height: var(--size__button);
+            border: none;
+            border-radius: var(--size__border-radius);
+            background-color: var(--color__background-second);
+            cursor: pointer;
+        }
+        input[type="checkbox"]:checked {
+            background-color: var(--color__foreground-primary);
+        }
+        input[type="checkbox"]:hover {
+            background-color: var(--color__foreground-second);
+        }
+
+        /* ----------------------------------------------------- Button */
+        button {
+            min-width: var(--size__button);
+            height: var(--size__button);
+            border: none;
+            border-radius: var(--size__border-radius);
+            background-color: var(--color__background-primary);
+            font-family: var(--font__family);
+            font-size: var(--font__height-small);
+            cursor: pointer;
+            color: var(--color__foreground-primary);
+            transition: background-color 0.3s ease;
+            align-items: center;
+            justify-content: center;
+        }
+        button:hover {
+            background-color: var(--color__foreground-second);
+            color: var(--color__background-second);
+        }
+        li p {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            width: 100%;
+            gap: var(--size__distance-small);
+        }
+
+        .item-row.dragging {
+            opacity: 0.5;
+        }
+
+        .item-row.drop-target {
+            outline: 1px dashed var(--color__foreground-second);
+            border-radius: var(--size__border-radius);
+            background-color: var(--color__background-second);
+        }
+
+        #root-dropzone {
+            padding: var(--size__distance-small);
+            border: 1px dashed var(--color__foreground-second);
+            margin: var(--size__distance-small);
+            text-align: center;
+            border-radius: var(--size__border-radius);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Super Simple Notes</h1>
+        <div class="entry">
+            <input type="text" id="data__input" placeholder="Type something... ">
+            <button onclick="createNote()">+</button>
+            <button id="ui__line-button">=</button>
+            <button id="data__export-button">↑</button>
+            <input type="file" id="data__import-file" style="display:none" />
+            <button id="data__import-button">↓</button>
+            <button id="data__clear-button">ⱥ</button>
+
+            <!-- Nút bật/tắt drag -->
+            <button id="drag-toggle-button">#</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="root-dropzone">
+            Click # to enable drag drop, drop here to become root or drop others to become child
+        </div>
+
+        <div>
+            <ul id="data__result"></ul>
+        </div>
+    </main>
+
+    <footer>
+    </footer>
+
+    <script>
+
+        //#region CONSTANT
+
+        const VERSION = "v0.6.0";
+        const APP_NAME = "SuperSimpleNote";
+
+        const APP_SELECT = {
+            dataInputId: "data__input",
+            dataResultId: "data__result",
+            dataExportButtonId: "data__export-button",
+            dataImportButtonId: "data__import-button",
+            dataImportFileInputId: "data__import-file",
+            dataClearButtonId: "data__clear-button",
+            dragToggleButtonId: "drag-toggle-button",
+            rootDropzoneId: "root-dropzone",
+            dataItemFinishClass: "data__item-finish",
+            dataItemTitleClass: "data__item-title",
+            dataItemDeleteButtonClass: "data__item-delete-button",
+            dataItemAddButtonClass: "data__item-add-button",
+            dataItemContentElement: "ul",
+            uiLineButtonId: "ui__line-button",
+        };
+
+        //#endregion
+
+        //#region STATE
+        
+        const APP_STATE = {
+            appData: [],
+            uiDisplayLine: false
+        };
+
+        let dragMode = false;   // bật/tắt chế độ drag
+        let DRAG_CTX = null;    // lưu ngữ cảnh khi drag
+
+        //#endregion
+
+        //#region UTILITIES
+
+        function dataSave() {
+        localStorage.setItem(APP_NAME, JSON.stringify(APP_STATE.appData));
+        }
+
+        function dataLoad() {
+        const raw = localStorage.getItem(APP_NAME);
+        if (raw) {
+            try {
+            APP_STATE.appData = JSON.parse(raw);
+            } catch {
+            APP_STATE.appData = [];
+            }
+        }
+        }
+
+        function dataRenderResult() {
+        const resultElement = document.getElementById(APP_SELECT.dataResultId);
+        resultElement.innerHTML = "";
+        APP_STATE.appData.forEach((item, index) => {
+            const li = createListElement(item, index, APP_STATE.appData);
+            resultElement.appendChild(li);
+        });
+        }
+
+        // kiểm tra xem node B có nằm trong cây con của node A không
+        function isDescendant(potentialAncestor, potentialParent) {
+            const stack = [...potentialAncestor.content];
+            while (stack.length) {
+                const node = stack.pop();
+                if (node === potentialParent) return true;
+                if (Array.isArray(node.content)) stack.push(...node.content);
+            }
+            return false;
+        }
+
+        // đánh dấu finish cho node và toàn bộ con cháu
+        function markFinishRecursive(node, finishValue) {
+        node.finish = finishValue;
+        if (Array.isArray(node.content)) {
+            for (const child of node.content) {
+            markFinishRecursive(child, finishValue);
+            }
+        }
+        }
+
+        // cập nhật finish + UI
+        function dataUiCheckFinishLoop(dataItem, finishValue, itemElement) {
+        dataItem.finish = finishValue;
+        markFinishRecursive(dataItem, finishValue);
+
+        if (itemElement) {
+            const row = itemElement.querySelector("p.item-row");
+            if (row) {
+            const addBtn = row.querySelector(`.${APP_SELECT.dataItemAddButtonClass}`);
+            const delBtn = row.querySelector(`.${APP_SELECT.dataItemDeleteButtonClass}`);
+            const titleInput = row.querySelector(`.${APP_SELECT.dataItemTitleClass}`);
+            const finishCheckbox = row.querySelector(`.${APP_SELECT.dataItemFinishClass}`);
+
+            if (finishCheckbox) finishCheckbox.checked = finishValue;
+            if (titleInput) titleInput.disabled = dragMode || finishValue;
+            if (addBtn) addBtn.style.display = finishValue ? "none" : "inline-block";
+            if (delBtn) delBtn.style.display = finishValue ? "inline-block" : "none";
+            }
+        }
+
+        dataSave();
+        }
+        //#endregion
+
+        function createListElement(dataItem, index, parentData) {
+            const itemElement = document.createElement("li");
+
+            // Hàng hiển thị chính
+            const itemRow = document.createElement("p");
+            itemRow.classList.add("item-row");
+
+            // Checkbox finish
+            const itemFinish = document.createElement("input");
+            itemFinish.type = "checkbox";
+            itemFinish.classList.add(APP_SELECT.dataItemFinishClass);
+            itemFinish.checked = dataItem.finish;
+            itemFinish.onchange = () => {
+                const finishValue = itemFinish.checked;
+                dataUiCheckFinishLoop(dataItem, finishValue, itemElement);
+                dataRenderResult();
+            };
+
+            // Input title
+            const itemTitle = document.createElement("input");
+            itemTitle.type = "text";
+            itemTitle.classList.add(APP_SELECT.dataItemTitleClass);
+            itemTitle.value = dataItem.title;
+            itemTitle.disabled = dragMode || dataItem.finish;
+            itemTitle.addEventListener("input", () => {
+                dataItem.title = itemTitle.value;
+                dataSave();
+            });
+
+            // Nút delete
+            const itemDeleteButton = document.createElement("button");
+            itemDeleteButton.textContent = "x";
+            itemDeleteButton.classList.add(APP_SELECT.dataItemDeleteButtonClass);
+            itemDeleteButton.style.display = dataItem.finish ? "inline-block" : "none";
+            itemDeleteButton.onclick = () => {
+                parentData.splice(index, 1);
+                dataSave();
+                dataRenderResult();
+            };
+
+            // Nút add
+            const itemAddButton = document.createElement("button");
+            itemAddButton.textContent = "+";
+            itemAddButton.classList.add(APP_SELECT.dataItemAddButtonClass);
+            itemAddButton.style.display = dataItem.finish ? "none" : "inline-block";
+            itemAddButton.onclick = () => {
+                const newContentItem = { title: "New sub note", finish: false, content: [] };
+                dataItem.content.push(newContentItem);
+                dataSave();
+                dataRenderResult();
+            };
+
+            // Vùng chứa note con
+            const itemContent = document.createElement(APP_SELECT.dataItemContentElement);
+            dataItem.content.forEach((contentItem, contentIndex) => {
+                const contentElement = createListElement(contentItem, contentIndex, dataItem.content);
+                itemContent.appendChild(contentElement);
+            });
+
+            // Ghép các control vào itemRow
+            itemRow.append(itemAddButton, itemDeleteButton, itemFinish, itemTitle);
+
+            // Drag & Drop từ p sang p
+            itemRow.draggable = dragMode;
+            itemRow.addEventListener("dragstart", (e) => {
+                DRAG_CTX = { parentData, index, item: dataItem };
+                e.dataTransfer.setData("text/plain", "drag");
+                itemRow.classList.add("dragging");
+            });
+            itemRow.addEventListener("dragend", () => {
+                itemRow.classList.remove("dragging");
+                DRAG_CTX = null;
+            });
+            itemRow.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                if (DRAG_CTX && (DRAG_CTX.item === dataItem || isDescendant(DRAG_CTX.item, dataItem))) return;
+                itemRow.classList.add("drop-target");
+            });
+            itemRow.addEventListener("dragleave", () => {
+                itemRow.classList.remove("drop-target");
+            });
+            itemRow.addEventListener("drop", (e) => {
+                e.preventDefault();
+                itemRow.classList.remove("drop-target");
+                if (!DRAG_CTX) return;
+
+                const { parentData: fromArr, index: fromIndex, item: draggedItem } = DRAG_CTX;
+                if (draggedItem === dataItem || isDescendant(draggedItem, dataItem)) {
+                    DRAG_CTX = null;
+                    return;
+                }
+
+                fromArr.splice(fromIndex, 1);
+                dataItem.content.push(draggedItem);
+
+                DRAG_CTX = null;
+                dataSave();
+                dataRenderResult();
+            });
+
+            itemElement.append(itemRow, itemContent);
+            return itemElement;
+            }
+        
+        // Tạo note mới từ input
+        function createNote() {
+            const input = document.getElementById(APP_SELECT.dataInputId);
+            const title = input.value.trim();
+            if (!title) return;
+
+            const newNote = { title: title, finish: false, content: [] };
+            APP_STATE.appData.push(newNote);
+
+            dataSave();
+            dataRenderResult();
+            input.value = "";
+        }
+        
+        // Press Enter
+        function dataCreateNoteEvent() {
+            const dataInputElement = document.getElementById(APP_SELECT.dataInputId);
+            dataInputElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    createNote();
+                }
+            });
+        }
+
+        // Toggle drag mode
+        function dragToggleButtonEvent() {
+            const dragButton = document.getElementById(APP_SELECT.dragToggleButtonId);
+            if (!dragButton) return;
+
+            dragButton.addEventListener("click", () => {
+                dragMode = !dragMode;
+                dragButton.style.backgroundColor = dragMode ? "#4a90e2" : "";
+                dataRenderResult(); // cập nhật draggable + disabled
+                applyLineMode();    // giữ nguyên chế độ đường ngang sau re-render
+            });
+        }
+
+        // Toggle chế độ đường ngang
+        function lineToggleButtonEvent() {
+            const lineButton = document.getElementById(APP_SELECT.uiLineButtonId);
+            if (!lineButton) return;
+
+            lineButton.addEventListener("click", () => {
+                APP_STATE.uiDisplayLine = !APP_STATE.uiDisplayLine;
+                applyLineMode();
+            });
+        }
+
+        // Áp dụng class cho chế độ đường ngang
+        function applyLineMode() {
+            const resultElement = document.getElementById(APP_SELECT.dataResultId);
+            if (!resultElement) return;
+
+            if (APP_STATE.uiDisplayLine) {
+                resultElement.classList.add("with-lines");
+            } else {
+                resultElement.classList.remove("with-lines");
+            }
+        }
+
+        // Root dropzone
+        function attachRootDropzone() {
+        const rootDropzone = document.getElementById(APP_SELECT.rootDropzoneId);
+        if (!rootDropzone) return;
+
+        rootDropzone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            rootDropzone.classList.add("drop-target");
+        });
+
+        rootDropzone.addEventListener("dragleave", () => {
+            rootDropzone.classList.remove("drop-target");
+        });
+
+        rootDropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            rootDropzone.classList.remove("drop-target");
+            if (!DRAG_CTX) return;
+
+            const { parentData: fromArr, index: fromIndex, item: draggedItem } = DRAG_CTX;
+            fromArr.splice(fromIndex, 1);
+            APP_STATE.appData.push(draggedItem);
+
+            DRAG_CTX = null;
+            dataSave();
+            dataRenderResult();
+            applyLineMode(); // giữ chế độ đường ngang sau drop
+        });
+        }
+
+        //#region Import
+
+        function dataImportButtonEvent() {
+            const importButton = document.getElementById(APP_SELECT.dataImportButtonId);
+            const importFile = document.getElementById(APP_SELECT.dataImportFileInputId);
+
+            // gắn sự kiện change một lần
+            importFile.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        if (Array.isArray(importedData)) {
+                            APP_STATE.appData = importedData;
+                            dataSave();
+                            dataRenderResult();
+                        } else {
+                            alert("File is wrong type!");
+                        }
+                    } catch (err) {
+                        alert(err);
+                    }
+                };
+                reader.readAsText(file);
+            });
+
+            // click nút import thì mở file input
+            importButton.addEventListener('click', () => {
+                importFile.click();
+            });
+        }
+
+        //#endregion
+
+        function dataExportButtonEvent() {
+            const exportButton = document.getElementById(APP_SELECT.dataExportButtonId);
+            exportButton.addEventListener('click', () => {
+                const dataString = JSON.stringify(APP_STATE.appData, null, 2);
+                const blob = new Blob([dataString], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = APP_STATE.appFile;
+                a.click();
+
+                URL.revokeObjectURL(url)
+            });
+        }
+
+        // Khởi động
+        window.onload = () => {
+            dataLoad();
+            dataRenderResult();
+            dragToggleButtonEvent();
+            lineToggleButtonEvent();
+            attachRootDropzone();
+            applyLineMode();
+            dataImportButtonEvent();
+            dataCreateNoteEvent();
+            dataExportButtonEvent();
+        };
+    </script>
+</body>
+</html>
