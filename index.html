@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Simple Note</title>
+    <title>Simple Note</title>
     <style>
         :root {
             /* Colors */
@@ -95,11 +95,20 @@
         li li {
             margin-left: var(--size__distance-level);
         }
-        /* Chỉ áp dụng border cho item-row của level 0 */
-        .with-lines > li > .item-row {
-        border-top: 1px dashed var(--color__foreground-primary);
-        padding-top: 6px; /* tuỳ chỉnh khoảng cách */
+        li .item-row {
+            background-color: var(--color__foreground-second);
+            padding: var(--size__distance-small);
+            border-radius: var(--size__border-radius);
         }
+        li li .item-row {
+            background-color: transparent;
+            padding: 0px
+        }
+        /* Chỉ áp dụng border cho item-row của level 0 
+        .with-lines > li > .item-row {
+            border-top: 1px dashed var(--color__foreground-primary);
+            padding-top: 6px;
+        }*/
 
         /* ----------------------------------------------------- Input Text */
         input[type="text"] {
@@ -129,7 +138,12 @@
         input[type="checkbox"]:hover {
             background-color: var(--color__foreground-second);
         }
-
+        input[type='text']:focus {
+            background-color: var(--color__background-second);
+        }
+        li input[type='text'] {
+            background-color: transparent;
+        }
         /* ----------------------------------------------------- Button */
         button {
             min-width: var(--size__button);
@@ -182,7 +196,6 @@
         <div class="entry">
             <input type="text" id="data__input" placeholder="Type something... ">
             <button onclick="createNote()">+</button>
-            <button id="ui__line-button">=</button>
             <button id="data__export-button">↑</button>
             <input type="file" id="data__import-file" style="display:none" />
             <button id="data__import-button">↓</button>
